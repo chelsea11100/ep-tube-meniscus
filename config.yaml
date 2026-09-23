@@ -1,0 +1,40 @@
+# 离心管液量识别流水线配置
+# API Key 请放环境变量 DASHSCOPE_API_KEY，不要写进本文件。
+
+min_fill_percent: 10
+crop_padding: 0.10
+crop_padding_bottom: 0.22
+verbose: true
+
+yolo:
+  backend: opencv_first
+  fallback_yolo: false
+  weights: yolov8s-worldv2.pt
+  conf: 0.01
+  iou: 0.50
+  imgsz: 1280
+  classes:
+    - centrifuge tube
+    - microcentrifuge tube
+    - eppendorf tube
+    - tube
+    - plastic vial
+
+liquid:
+  backend: local
+  tube_top_frac: 0.18
+  tube_bottom_frac: 0.05
+  center_x_left: 0.28
+  center_x_right: 0.72
+  meniscus_min_peak: 0.30
+  empty_peak_max: 0.26
+
+vlm:
+  api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+  model: qwen-vl-max
+  timeout_sec: 90
+  max_image_side: 1280
+  prompt_file: prompts/liquid_judge.txt
+
+paths:
+  output_dir: output
