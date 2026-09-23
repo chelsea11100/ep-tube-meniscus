@@ -20,8 +20,10 @@ def main() -> int:
     import uvicorn
 
     shown = "127.0.0.1" if args.host in ("0.0.0.0", "::") else args.host
-    print(f"液面服务: http://{shown}:{args.port}/v1/level")
-    print("POST multipart 字段名 image。返回 JSON，图在 image_base64。")
+    print(f"网页测试: http://{shown}:{args.port}/ui")
+    print(f"单张 API: http://{shown}:{args.port}/v1/level  (字段 image)")
+    print(f"批量: http://{shown}:{args.port}/v1/level/batch  (字段 images，可多文件)")
+    print("返回 JSON，图在每条结果的 image_base64。")
     print(f"健康检查: http://{shown}:{args.port}/health")
     uvicorn.run("src.server:app", host=args.host, port=args.port, app_dir=str(ROOT))
     return 0
