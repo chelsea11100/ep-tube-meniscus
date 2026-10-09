@@ -6,6 +6,7 @@ crop_padding: 0.10
 crop_padding_bottom: 0.22
 verbose: true
 
+# 默认 OpenCV 检管；fallback_yolo 为 true 时才需 yolov8s-worldv2.pt
 yolo:
   backend: opencv_first
   fallback_yolo: false
@@ -38,3 +39,26 @@ vlm:
 
 paths:
   output_dir: output
+
+# 一键取图+识别：POST /v1/inspect 或 /v1/snapshot（无需单独传 jpg）
+# backend: usb | v4l2(Linux) | rtsp | plugin（海康/机器人 SDK 写在 plugin 模块里）
+server:
+  capture:
+    # 工位一键：拍照(GigE) → 识别 → JSON（run_inspect.py / EpTubeInspector.capture_and_inspect）
+    backend: plugin
+    camera_index:
+    prefer_usb: true
+    width: 1280
+    height: 720
+    jpeg_quality: 85
+    rtsp_url:
+    plugin_module: examples.hikvision_gige
+    plugin_function: grab_frame
+    mvs_development_dir: "D:/桌面/明德实习资料/目前使用的机器人的资料/mvs/MVS/Development"
+    mvs_runtime_dir: "C:/Program Files (x86)/Common Files/MVS/Runtime/Win64_x64"
+    mvs_device_index: 0
+    mvs_feature_file: config/mv_cu120_features.mfs
+    mvs_warmup_frames: 45
+    # 识别前裁中心区域（%），收窄 X/Y 减少手指与背景干扰
+    roi_percent_x: 62
+    roi_percent_y: 88

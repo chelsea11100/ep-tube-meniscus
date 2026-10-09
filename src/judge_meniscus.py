@@ -206,6 +206,7 @@ def _detect_tube_bounds(
     y_seg = _y_bottom_from_last_segment(widths, y_top, h, max_w)
     if y_seg is not None and y_seg > y_bottom:
         y_bottom = y_seg
+    y_cone = y_bottom
 
     tube_w_px = max(8, x1_def - x0_def, int(max_w + 4))
     max_h = int(tube_w_px * 8.6)
@@ -230,15 +231,38 @@ def _detect_tube_bounds(
     width_cap = max(start_w * 1.22, start_w + 14.0, 10.0)
     gap = 0
     limit = min(h - 1, y_top + int(max(8.0, max_w) * 8.6))
-    for y2 in range(y_bottom + 1, limit + 1):
+    x_c0, x_c1 = int(w * 0.36), int(w * 0.64)
+    bright_thr = bg - 10.0
+    bright_run = 0
+    last_tube_row = y_bottom
+    max_extend = max(14, int(max_w * 0.45))
+    for y2 in range(y_bottom + 1, min(limit + 1, y_bottom + max_extend + 1)):
+        cent = float(gray[y2, x_c0:x_c1].mean())
+        if cent >= bright_thr:
+            bright_run += 1
+            if bright_run >= 2:
+                y_bottom = last_tube_row
+                break
+        else:
+            bright_run = 0
         ew = float(edge_w[y2])
         if ew < 4.0 or ew > width_cap:
             gap += 1
-            if gap > 8:
+            if gap > 4:
                 break
             continue
         y_bottom = y2
+        last_tube_row = y2
         gap = 0
+
+    if y_bottom >= h - 10:
+        pull = y_cone
+        if y_seg is not None:
+            pull = min(pull, y_seg)
+        y_bottom = min(y_bottom, pull + max(6, int(max_w * 0.2)))
+    # 手拿/整图时管身宽度常撑满画面底，勿把底缘贴在最后一行
+    if y_bottom >= h - 12 and max_w > w * 0.38:
+        y_bottom = min(y_bottom, max(y_top + 20, y_cone, int(h * 0.88)))
 
     y_top = max(0, y_top)
     y_bottom = min(h - 1, max(y_top + 12, y_bottom))
@@ -464,13 +488,17 @@ def detect_meniscus(
     grip_mode = grip_early > 0.32
     pink_band = crop_bgr[y_top:y_bot, :]
     pink_y, pink_conf, pink_bot, pink_x0, pink_x1 = _meniscus_from_center_pink(pink_band)
-    if pink_y is not None and pink_bot is not None:
-        pink_y = y_top + int(pink_y)
-        pink_bot = y_top + int(pink_bot)
+    if pink_bot is not None:
+        pink_bot_abs = y_top + int(pink_bot)
+        if pink_y is not None:
+            pink_y = y_top + int(pink_y)
         # 底线贴在画面最后一行、粉色液体还在上面：锥尖就在液柱下面一点。
-        if y_bot >= h - 8 and pink_bot + 8 < y_bot:
-            pad = max(8, int((pink_bot - pink_y) * 0.15))
-            y_bot = min(h - 1, pink_bot + pad)
+        if y_bot >= h - 8 and pink_bot_abs + 6 < y_bot:
+            if pink_y is not None:
+                pad = max(8, int((pink_bot_abs - pink_y) * 0.15))
+            else:
+                pad = max(8, min(24, int((pink_bot_abs - y_top) * 0.06)))
+            y_bot = min(h - 1, pink_bot_abs + pad)
             if pink_x1 - pink_x0 >= 6:
                 x0, x1 = int(pink_x0), min(w - 1, int(pink_x1))
             ignore_y = y_top + int((y_bot - y_top) * ignore_frac)
@@ -601,13 +629,17 @@ def detect_meniscus(
             best_val = mid_best
 
     if meniscus_idx < int(rh * 0.40) and grip_top > 0.32:
-        lo2 = int(rh * (0.40 if grip_top > 0.45 else 0.38))
-        if search_hi > lo2 + 8:
-            lower = score_sm[lo2:search_hi]
-            li = lo2 + int(np.argmax(lower))
-            if grip_top > 0.45 or float(score_sm[li]) >= best_val * 0.42:
-                meniscus_idx = li
-                best_val = float(score_sm[li])
+        if mid_hi > mid_lo + 8 and mid_best >= meniscus_min_peak * 0.72:
+            meniscus_idx = mid_idx
+            best_val = mid_best
+        else:
+            lo2 = int(rh * (0.40 if grip_top > 0.45 else 0.38))
+            if search_hi > lo2 + 8:
+                lower = score_sm[lo2:search_hi]
+                li = lo2 + int(np.argmax(lower))
+                if grip_top > 0.45 or float(score_sm[li]) >= best_val * 0.42:
+                    meniscus_idx = li
+                    best_val = float(score_sm[li])
 
     meniscus_y_try = y_top + int(meniscus_idx)
     rel_y = (meniscus_y_try - y_top) / max(1, y_bot - y_top)
