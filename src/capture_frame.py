@@ -28,11 +28,6 @@ class CaptureSettings:
     jpeg_quality: int = 85
     plugin_module: str = ""
     plugin_function: str = "grab_frame"
-    mvs_development_dir: str = ""
-    mvs_runtime_dir: str = ""
-    mvs_device_index: int = 0
-    mvs_feature_file: str = ""
-    mvs_warmup_frames: int = 45
     roi_percent_x: float = 100.0
     roi_percent_y: float = 100.0
 
@@ -65,11 +60,6 @@ def capture_settings_from_config(config: dict[str, Any]) -> CaptureSettings:
         jpeg_quality=int(cap.get("jpeg_quality", 85)),
         plugin_module=str(cap.get("plugin_module", "") or "").strip(),
         plugin_function=str(cap.get("plugin_function", "grab_frame") or "grab_frame"),
-        mvs_development_dir=str(cap.get("mvs_development_dir", "") or "").strip(),
-        mvs_runtime_dir=str(cap.get("mvs_runtime_dir", "") or "").strip(),
-        mvs_device_index=int(cap.get("mvs_device_index", 0)),
-        mvs_feature_file=str(cap.get("mvs_feature_file", "") or "").strip(),
-        mvs_warmup_frames=int(cap.get("mvs_warmup_frames", 45)),
         roi_percent_x=float(cap.get("roi_percent_x", 100)),
         roi_percent_y=float(cap.get("roi_percent_y", 100)),
     )
@@ -96,9 +86,17 @@ def resolve_usb_device(settings: CaptureSettings) -> CameraDevice:
     return pick
 
 
+CAPTURE_SOURCES = ("usb", "v4l2", "rtsp", "plugin")
+
+
 def grab_one_frame_bgr(settings: CaptureSettings) -> tuple[np.ndarray, dict[str, Any]]:
     """抓一帧 BGR；返回 (图像, 来源信息 meta)。"""
     backend = settings.backend.lower()
+    if backend not in CAPTURE_SOURCES:
+        raise RuntimeError(
+            f"未知取图方式 {backend!r}，可选：{', '.join(CAPTURE_SOURCES)}"
+        )
+
     if backend == "plugin":
         from .camera_plugin import grab_via_plugin
 

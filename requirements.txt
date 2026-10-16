@@ -9,5 +9,6 @@ pygrabber>=0.2; sys_platform == "win32"
 fastapi>=0.115.0
 uvicorn>=0.32.0
 python-multipart>=0.0.9
+requests>=2.31.0
 ftfy>=6.0.0
 regex>=2022.0.0

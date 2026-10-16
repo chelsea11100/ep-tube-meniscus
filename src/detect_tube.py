@@ -760,16 +760,25 @@ def _aabb_from_points(
     return x1, y1, x2, y2
 
 
+_CJK_FONTS = (
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/google-noto-cjk/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+    r"C:\Windows\Fonts\msyh.ttc",
+    r"C:\Windows\Fonts\simhei.ttf",
+)
+
+
 def put_chinese(image: np.ndarray, text: str, org: tuple[int, int]) -> np.ndarray:
     from PIL import Image, ImageDraw, ImageFont
 
     rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     pil = Image.fromarray(rgb)
     draw = ImageDraw.Draw(pil)
-    font_path = Path(r"C:\Windows\Fonts\msyh.ttc")
-    if not font_path.exists():
-        font_path = Path(r"C:\Windows\Fonts\simhei.ttf")
-    font = ImageFont.truetype(str(font_path), 36) if font_path.exists() else ImageFont.load_default()
+    font_path = next((Path(p) for p in _CJK_FONTS if Path(p).exists()), None)
+    font = ImageFont.truetype(str(font_path), 36) if font_path else ImageFont.load_default()
     draw.text(org, text, fill=(220, 0, 0), font=font)
     return cv2.cvtColor(np.array(pil), cv2.COLOR_RGB2BGR)
 

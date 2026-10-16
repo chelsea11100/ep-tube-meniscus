@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from src.capture_frame import CAPTURE_SOURCES
 from src.ep_tube_inspector import EpTubeHttpClient, EpTubeInspector
 
 
@@ -19,6 +20,12 @@ def main() -> int:
     p.add_argument("--local", action="store_true", help="不经过 HTTP，直接用 EpTubeInspector")
     p.add_argument("--host", default="127.0.0.1", help="run_server.py 所在机器 IP")
     p.add_argument("--port", type=int, default=8000)
+    p.add_argument(
+        "--source",
+        choices=CAPTURE_SOURCES,
+        default=None,
+        help="usb / v4l2 / rtsp / plugin；省略则用 config",
+    )
     p.add_argument("--camera", type=int, default=None, help="USB 索引，省略则用 config")
     p.add_argument("--no-image", action="store_true", help="不要 JSON 里的标注图")
     p.add_argument("--save", type=Path, default=None, help="保存标注图到本地")
@@ -27,12 +34,14 @@ def main() -> int:
 
     if args.local:
         data = EpTubeInspector().capture_and_inspect(
+            source=args.source,
             camera_index=args.camera,
             include_image=not args.no_image,
         )
     else:
         client = EpTubeHttpClient(f"http://{args.host}:{args.port}")
         data = client.snapshot(
+            source=args.source,
             camera_index=args.camera,
             include_image=not args.no_image,
         )

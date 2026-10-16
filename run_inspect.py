@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """
-工位一键：海康拍照 → 液面识别 → JSON + JPG（原图 / 标注图）。
+工位一键：摄像头拍照 → 液面识别 → JSON + JPG（原图 / 标注图）。
 
-用法（先关闭 MVS Client）::
+用法::
 
-  $env:Path = "C:\\Program Files (x86)\\Common Files\\MVS\\Runtime\\Win64_x64;" + $env:Path
-  .\\.venv\\Scripts\\Activate.ps1
-  python run_inspect.py -o output/inspect_result.json
+  .venv/bin/python run_inspect.py -o output/inspect_result.json
 """
 
 from __future__ import annotations
@@ -14,8 +12,8 @@ from __future__ import annotations
 import argparse
 import base64
 import json
-import os
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import cv2
@@ -27,21 +25,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.capture_frame import (
+    CAPTURE_SOURCES,
     apply_roi_center_percent,
     capture_settings_from_config,
     grab_one_frame_bgr,
 )
 from src.ep_tube_inspector import EpTubeInspector
-from src.mvs_hikvision import resolve_mvs_paths
-
-
-def _prepend_mvs_runtime(config: dict) -> None:
-    settings = capture_settings_from_config(config)
-    if settings.backend.lower() != "plugin":
-        return
-    _, rt_dir = resolve_mvs_paths(settings)
-    if rt_dir.is_dir():
-        os.environ["PATH"] = str(rt_dir) + os.pathsep + os.environ.get("PATH", "")
 
 
 def _write_jpg_bgr(path: Path, bgr: np.ndarray) -> None:
@@ -90,14 +79,29 @@ def main() -> int:
         action="store_true",
         help="JSON 中不包含 image_base64",
     )
+    parser.add_argument(
+        "--source",
+        choices=CAPTURE_SOURCES,
+        default=None,
+        help="取图方式：usb / v4l2 / rtsp / plugin；省略则按 config.yaml",
+    )
+    parser.add_argument(
+        "--camera",
+        type=int,
+        default=None,
+        help="USB 设备索引，省略则自动优先外接 USB",
+    )
     args = parser.parse_args()
 
     cfg_path = ROOT / "config.yaml"
     with cfg_path.open(encoding="utf-8") as f:
         config = yaml.safe_load(f) or {}
-    _prepend_mvs_runtime(config)
 
     settings = capture_settings_from_config(config)
+    if args.source:
+        settings = replace(settings, backend=args.source)
+    if args.camera is not None:
+        settings = replace(settings, camera_index=args.camera)
     bgr, meta = grab_one_frame_bgr(settings)
     roi_off = (0, 0)
     if settings.roi_percent_x < 99.5 or settings.roi_percent_y < 99.5:

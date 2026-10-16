@@ -5,8 +5,6 @@ __pycache__/
 .venv/
 venv/
 *.pt
-视觉摄像机/*.exe
-视觉摄像机/*.msi
 runs/
 .idea/
 .vscode/

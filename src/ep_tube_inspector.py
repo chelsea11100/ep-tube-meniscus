@@ -95,11 +95,16 @@ class EpTubeInspector:
     def snapshot(
         self,
         *,
+        source: str | None = None,
         camera_index: int | None = None,
         include_image: bool = True,
     ) -> dict[str, Any]:
-        """取摄像机一帧 → 识别 → 返回 JSON 结构 dict。"""
-        settings = self._capture_settings(camera_index)
+        """取摄像机一帧 → 识别 → 返回 JSON 结构 dict。
+
+        source: usb / v4l2 / rtsp / plugin；
+        省略则用 config.yaml 的 server.capture.backend。
+        """
+        settings = self._capture_settings(camera_index, source)
         try:
             frame, meta = grab_one_frame_bgr(settings)
         except RuntimeError as exc:
@@ -116,17 +121,24 @@ class EpTubeInspector:
     def capture_and_inspect(
         self,
         *,
+        source: str | None = None,
         camera_index: int | None = None,
         include_image: bool = True,
     ) -> dict[str, Any]:
         """一次调用：取图 → 识别 → JSON（与 snapshot 相同，便于工位集成命名）。"""
-        return self.snapshot(camera_index=camera_index, include_image=include_image)
+        return self.snapshot(
+            source=source, camera_index=camera_index, include_image=include_image
+        )
 
-    def _capture_settings(self, camera_index: int | None) -> CaptureSettings:
-        base = self._capture
-        if camera_index is None:
-            return base
-        return replace(base, camera_index=camera_index)
+    def _capture_settings(
+        self, camera_index: int | None, source: str | None = None
+    ) -> CaptureSettings:
+        settings = self._capture
+        if source:
+            settings = replace(settings, backend=source.lower())
+        if camera_index is not None:
+            settings = replace(settings, camera_index=camera_index)
+        return settings
 
     @staticmethod
     def _load_image(image: str | Path | np.ndarray) -> np.ndarray:
@@ -270,12 +282,15 @@ class EpTubeHttpClient:
     def snapshot(
         self,
         *,
+        source: str | None = None,
         camera_index: int | None = None,
         include_image: bool = True,
     ) -> dict[str, Any]:
         import requests
 
         params: dict[str, Any] = {"include_image": include_image}
+        if source:
+            params["source"] = source
         if camera_index is not None:
             params["camera_index"] = camera_index
         r = requests.post(
@@ -289,7 +304,10 @@ class EpTubeHttpClient:
     def capture_and_inspect(
         self,
         *,
+        source: str | None = None,
         camera_index: int | None = None,
         include_image: bool = True,
     ) -> dict[str, Any]:
-        return self.snapshot(camera_index=camera_index, include_image=include_image)
+        return self.snapshot(
+            source=source, camera_index=camera_index, include_image=include_image
+        )
