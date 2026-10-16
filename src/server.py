@@ -36,9 +36,7 @@ def root() -> dict:
         "single": "POST /v1/level  (form field: image)",
         "batch": "POST /v1/level/batch  (form field: images)",
         "cameras": "GET /v1/cameras",
-        "inspect_once": "POST /v1/inspect  (取图+识别一体，与 /v1/snapshot 相同；?source=usb|v4l2|rtsp)",
-        "snapshot": "POST /v1/snapshot",
-        "capture": "POST /v1/level/capture  (兼容旧名)",
+        "snapshot": "POST /v1/snapshot  (取图+识别；?source=usb|v4l2|rtsp)",
     }
 
 
@@ -87,7 +85,6 @@ _CAMERA_INDEX_QUERY = Query(
 _INCLUDE_IMAGE_QUERY = Query(True, description="是否返回 image_base64 标注图")
 
 
-@app.post("/v1/inspect")
 @app.post("/v1/snapshot")
 def snapshot(
     source: str | None = _SOURCE_QUERY,
@@ -95,16 +92,6 @@ def snapshot(
     include_image: bool = _INCLUDE_IMAGE_QUERY,
 ) -> dict:
     """取摄像机一帧 JPG → 液面识别 → 返回 JSON（机器人/工位推荐入口）。"""
-    return _snapshot_once(camera_index, include_image, source)
-
-
-@app.post("/v1/level/capture")
-def level_capture(
-    source: str | None = _SOURCE_QUERY,
-    camera_index: int | None = Query(None),
-    include_image: bool = Query(True),
-) -> dict:
-    """与 POST /v1/snapshot 相同（兼容旧路径）。"""
     return _snapshot_once(camera_index, include_image, source)
 
 

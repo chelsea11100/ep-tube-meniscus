@@ -40,14 +40,14 @@ vlm:
 paths:
   output_dir: output
 
-# 一键取图+识别：POST /v1/inspect 或 /v1/snapshot（无需单独传 jpg）
+# 一键取图+识别：POST /v1/snapshot（无需单独传 jpg）
 # backend: usb（OpenCV，Linux 上会自动用 V4L2）| v4l2 | rtsp | plugin（自定义 SDK 模块）
 # 调用时可用 ?source=... 临时覆盖
 server:
   capture:
     backend: usb
     # 留空则自动优先外接 USB；Linux 上对应 /dev/videoN 的 N
-    camera_index:
+    camera_index: 0
     prefer_usb: true
     width: 1280
     height: 720

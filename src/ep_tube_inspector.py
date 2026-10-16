@@ -294,7 +294,7 @@ class EpTubeHttpClient:
         if camera_index is not None:
             params["camera_index"] = camera_index
         r = requests.post(
-            f"{self.base_url}/v1/inspect",
+            f"{self.base_url}/v1/snapshot",
             params=params,
             timeout=self.timeout,
         )
