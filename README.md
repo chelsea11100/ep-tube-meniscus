@@ -23,7 +23,7 @@ Given a USB / V4L2 / RTSP frame, or an uploaded JPEG/PNG, the pipeline:
 3. Estimates the meniscus on the tube crop from the horizontal intensity peak along the tube body, then converts that height into a fill percentage of a nominal 1.5 mL tube.
 4. Returns structured JSON plus an annotated image. `allow_grasp` is true only when the tube is found, a meniscus is reliable, and the fill is at or above the configured minimum (default 10%).
 
-The same logic is exposed as a FastAPI service (the integration point for a robot), a small Python class (`EpTubeInspector`), and command-line scripts for offline images. A cloud vision-language model (Qwen-VL) can replace the local meniscus estimator if an API key is set; the default path stays fully local.
+The same logic is exposed as a FastAPI service (the integration point for a robot), a desktop GUI for camera preview and threshold tuning, a small Python class (`EpTubeInspector`), and command-line scripts for offline images. A cloud vision-language model (Qwen-VL) can replace the local meniscus estimator if an API key is set; the default path stays fully local.
 
 Stack: Python, OpenCV, NumPy, FastAPI. Optional: Ultralytics YOLO, an OpenAI-compatible vision API.
 
@@ -135,6 +135,21 @@ python run.py path/to/images
 
 每张图会在 `output/<文件名>/` 下留下裁剪图、检测图、液面图和 `result.json`。
 
+## 桌面界面
+
+现场看画面、拖动液面线、调 ROI 和阈值时用桌面界面，不必先起 HTTP 服务。
+
+```bash
+python run_gui.py
+python run_gui.py --camera 0 --open-camera
+```
+
+1. 右侧点 **扫描**，在下拉框里选外接 USB，不要选笔记本内置摄像头。
+2. 点 **打开 USB 摄像头**。
+3. 勾选 **摄像头开启时自动分析跟线**，或点 **分析当前画面**。
+
+默认相机写在 `config.yaml` 的 `gui.camera_index`、`prefer_usb`、`auto_open_camera`。改完代码后关掉窗口再开。
+
 ## HTTP 接口
 
 | 方法 | 路径 | 用途 |
@@ -182,6 +197,7 @@ result = client.snapshot(source="usb", include_image=True)
 | `yolo.fallback_yolo` | 默认 false。打开后才加载 YOLO 权重 |
 | `liquid.backend` | 默认 `local`（弯月面）。改为 `qwen` 时改走视觉模型 |
 | `server.capture` | 取图方式、分辨率、相机索引、RTSP、中心裁剪比例 |
+| `gui` | 桌面界面的默认相机、分辨率，以及启动时是否自动打开摄像头 |
 
 取图相关：
 
@@ -215,6 +231,7 @@ export DASHSCOPE_API_KEY=your_key
 ```text
 ep-tube-meniscus/
 ├── run_server.py          # 启动 HTTP 服务
+├── run_gui.py             # 桌面界面：摄像头、液面线、阈值
 ├── run_inspect.py         # 本机拍一张：JSON + 原图 + 标注图
 ├── run.py                 # 对图片或文件夹批量识别
 ├── config.yaml
@@ -230,5 +247,8 @@ ep-tube-meniscus/
     ├── judge_meniscus.py      # 本地弯月面与液量
     ├── judge_liquid.py        # 视觉模型液量判断
     ├── capture_frame.py       # USB / RTSP / 插件取图
-    └── pipeline.py            # 批量图片流水线
+    ├── pipeline.py            # 批量图片流水线
+    ├── level_meter_gui.py     # 桌面界面
+    ├── threshold_editor.py    # 阈值编辑
+    └── color_threshold.py     # 颜色阈值
 ```
